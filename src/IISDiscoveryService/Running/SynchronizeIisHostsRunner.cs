@@ -1,4 +1,5 @@
 ﻿using System;
+using IISDiscoveryService.Synchronization.Models;
 using IISDiscoveryService.Synchronization.Services;
 using Polly;
 
@@ -6,19 +7,21 @@ namespace IISDiscoveryService.Running
 {
     public class SynchronizeIisHostsRunner
     {
-        private readonly ISynchronizeIISHosts _iisHostSynchronizer;
+        private readonly IApplySynchronizationRules _iisHostSynchronizer;
+        
+        public Configuration Configuration { get; set; }
 
-        public SynchronizeIisHostsRunner(ISynchronizeIISHosts iisHostSynchronizer)
+        public SynchronizeIisHostsRunner(IApplySynchronizationRules iisHostSynchronizer)
         {
             _iisHostSynchronizer = iisHostSynchronizer;
         }
 
         public void Run(object state)
         {
-            Policy.Handle<Exception>().WaitAndRetryForever(
-                SleepDurationProvider,
-                OnRetry).Execute(
-                _iisHostSynchronizer.Synchronize);
+            foreach (var rule in Configuration.SynchronizationRules)
+            {
+                _iisHostSynchronizer.Apply(rule);
+            }
         }
 
         private void OnRetry(Exception exception, int arg2, TimeSpan arg3)

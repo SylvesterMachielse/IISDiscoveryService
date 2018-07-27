@@ -11,6 +11,8 @@ namespace IISDiscoveryService.SynchronizationProviders
     {
         public ItemToProcess<TargetModel> Provide(string hostName, List<ItemToProcess<TargetModel>> targets)
         {
+            if(!targets.Any()) return null;
+
             var result = targets.SingleOrDefault(x =>
                 x.Item.Targets.Any(y => y.Equals(hostName, StringComparison.InvariantCultureIgnoreCase)));
 

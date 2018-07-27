@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Microsoft.Web.Administration;
 
 namespace IISDiscoveryService.Synchronization.Providers
 {
     public class HostNameProvider : IProvideHostNames
     {
-        public List<string> Provide()
+        public List<string> Provide(string regexFilter)
         {
             var result = new List<string>();
             var iisManager = new ServerManager();
@@ -14,10 +14,10 @@ namespace IISDiscoveryService.Synchronization.Providers
 
             foreach (Site site in sites)
             {
-                Console.WriteLine(site.Name);
-
                 foreach (var binding in site.Bindings)
                 {
+                    if (!Regex.IsMatch(binding.Host, regexFilter)) continue;
+
                     result.Add(binding.Host);
                 }
             }

@@ -4,6 +4,6 @@ namespace IISDiscoveryService.Synchronization.Providers
 {
     public interface IProvideHostNames
     {
-        List<string> Provide();
+        List<string> Provide(string regexFilter);
     }
 }

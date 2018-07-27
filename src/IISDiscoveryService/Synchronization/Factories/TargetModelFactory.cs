@@ -1,23 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using PrometheusFileServiceDiscovery.Contracts.Models;
-using PrometheusFileServiceDiscoveryApi.Client;
-using RestSharp;
 
-namespace IISDiscoveryService.Synchronization.Persisters
+namespace IISDiscoveryService.Synchronization.Factories
 {
-    public class HostAsTargetPersister : IPersistHostAsTarget
+    public class TargetModelFactory : ICreateTargetModels
     {
         public Dictionary<string,string> GlobalTags {get;set;}
 
-        private readonly ITargetsClient _targetsClient;
-        
-        public HostAsTargetPersister(ITargetsClient targetsClient)
-        {
-            _targetsClient = targetsClient;
-        }
-
-        public IRestResponse Persist(string hostname, Dictionary<string,string> tags)
+        public TargetModel Create(string hostname, Dictionary<string, string> tags)
         {
             var newTarget = new TargetModel()
             {
@@ -44,9 +35,7 @@ namespace IISDiscoveryService.Synchronization.Persisters
                 }
             }
 
-            var result = _targetsClient.Put(newTarget);
-
-            return result;
-        }       
+            return newTarget;
+        }
     }
 }

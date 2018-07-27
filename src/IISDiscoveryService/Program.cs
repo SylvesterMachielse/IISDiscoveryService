@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Threading;
 using Autofac;
 using IISDiscoveryService.DependencyInjection;
+using IISDiscoveryService.Running;
+using IISDiscoveryService.Synchronization.Services;
 
 namespace IISDiscoveryService
 {
@@ -8,25 +11,26 @@ namespace IISDiscoveryService
     {
         static void Main(string[] args)
         {
-            using (var scope = new IisDiscoveryServiceContainerBuilder().Build())
-            {
-                var mainService = scope.Resolve<MainService>();
-                mainService.Run();
-            
-            }
+            Console.WriteLine("Loading configuration");
+
+            var timer = new Timer(Run, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
 
             Console.ReadKey();
         }
 
-        private static void OnRetry(Exception exception, int arg2, TimeSpan arg3)
+        private static void Run(object state)
         {
-            //TODO: up a metric
-            Console.WriteLine($"EXCEPTION: {exception.Message}, {nameof(arg2)}: {arg2}, {nameof(arg3)}:{arg3}");
-        }
+            var configuration = new ConfigurationProvider().Provide();
 
-        private static TimeSpan SleepDurationProvider(int arg)
-        {
-            return TimeSpan.FromSeconds(10);
+            using (var scope = new IisDiscoveryServiceContainerBuilder().Build(configuration))
+            {
+                var synchronizationRulesApplier = scope.Resolve<IApplySynchronizationRules>();
+                
+                foreach (var rule in configuration.SynchronizationRules)
+                {
+                    synchronizationRulesApplier.Apply(rule);
+                }
+            }
         }
     }
 }

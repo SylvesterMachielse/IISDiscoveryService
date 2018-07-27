@@ -10,6 +10,8 @@ namespace IISDiscoveryService.Synchronization.Providers
     {
         public ItemToProcess<string> Provide(TargetModel target, List<ItemToProcess<string>> hosts)
         {
+            if(!hosts.Any()) return null;
+
             var result = hosts.SingleOrDefault(host =>
                 target.Targets.Any(y => y.Equals(host.Item, StringComparison.InvariantCultureIgnoreCase)));
 

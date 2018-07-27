@@ -15,7 +15,7 @@ namespace IISDiscoveryService
 
         public void Run()
         {
-            var timer = new Timer(_synchronizeIisHostsRunner.Run, "", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(1));
+            var timer = new Timer(_synchronizeIisHostsRunner.Run, "", TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
     }
 }
