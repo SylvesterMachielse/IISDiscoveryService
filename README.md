@@ -3,7 +3,7 @@
 A service that scans IIS websites and syncs them with the PrometheusFileServiceDiscoveryApi. 
 
 ## Configuration:
-```javascript
+```json
 {
   "TargetClient": "http://localhost:9099",      //the location of PrometheusFileServiceDiscoveryApi
   "GlobalTags": { "globalkey": "globalvalue" }, // tags that will be added to ALL targets
