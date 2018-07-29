@@ -1,0 +1,6 @@
+language: csharp
+mono: none
+dotnet: 2.1.200
+before_script: cd src
+script:
+ - dotnet restore
