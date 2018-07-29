@@ -32,3 +32,15 @@ The synchronization runs every minute. The configuration file is re-read on ever
 ## Architecture
 ![architecture](https://github.com/SylvesterMachielse/IISDiscoveryService/raw/master/architecture.PNG "Architecture")
 
+## Installation
+### Prerequisites
+This service works in conjuction with the [PrometheusFileServiceDiscoveryApi](https://github.com/SylvesterMachielse/PrometheusFileServiceDiscoveryApi). The PrometheusFileServiceDiscoveryApi must be running somewhere.
+
+### How to install
+There is a work in progress installation script [here](https://raw.githubusercontent.com/SylvesterMachielse/IISDiscoveryService/master/InstallScript.ps)
+
+The idea is:
+1. Download the [latest release](https://github.com/SylvesterMachielse/IISDiscoveryService/releases/download/v1.0/publish.7z)
+2. Unzip 
+3. Modify the settings file to your needs (not in the script)
+4. Create a service. The script does this with [NSSM](https://nssm.cc/)
