@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/SylvesterMachielse/IISDiscoveryService.svg?branch=master)](https://travis-ci.org/SylvesterMachielse/IISDiscoveryService)
 # IISDiscoveryService
-A service that scans IIS websites and syncs them with the PrometheusFileServiceDiscoveryApi. 
+A service that scans IIS websites and syncs them with the [PrometheusFileServiceDiscoveryApi](https://github.com/SylvesterMachielse/PrometheusFileServiceDiscoveryApi). 
 
 ## Configuration:
 ```javascript
