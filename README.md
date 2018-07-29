@@ -28,3 +28,7 @@ All sites that end with `mysite.com` will be synced with the PrometheusFileServi
 * sites that have corresponding targets, will get relabeled if the label configuration is changed.
 
 The synchronization runs every minute. The configuration file is re-read on every run.
+
+## Architecture
+![architecture](https://github.com/SylvesterMachielse/IISDiscoveryService/raw/master/architecture.PNG "Architecture")
+
