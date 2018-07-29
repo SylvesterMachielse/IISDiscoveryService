@@ -20,7 +20,6 @@ namespace IISDiscoveryService.DependencyInjection
             builder.Register(c => new TargetsClient(configuration.TargetClient)).As<ITargetsClient>().SingleInstance();
             builder.RegisterType<HostNameProvider>().As<IProvideHostNames>().SingleInstance();
             builder.RegisterType<TargetsReflectingHostsProvider>().As<IProvideTargetsReflectingHosts>().SingleInstance();
-            builder.Register(c => new HostAsTargetPersister(c.Resolve<ITargetsClient>()) {GlobalTags = configuration.GlobalTags}).As<IPersistHostAsTarget>().SingleInstance();
             builder.RegisterType<TargetDeleter>().As<IDeleteTargets>().SingleInstance();
             builder.RegisterType<SynchronizationRuleApplier>().As<IApplySynchronizationRules>().SingleInstance();
             builder.Register(c => new TargetModelFactory() {GlobalTags = configuration.GlobalTags }).As<ICreateTargetModels>().SingleInstance();

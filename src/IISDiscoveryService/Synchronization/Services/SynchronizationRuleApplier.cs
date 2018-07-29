@@ -20,7 +20,6 @@ namespace IISDiscoveryService.Synchronization.Services
         private readonly IProvideHostNames _hostNameProvider;
         private readonly ITargetsClient _targetsClient;
         private readonly IProvideTargetsReflectingHosts _targetsReflectingHostProvider;
-        private readonly IPersistHostAsTarget _hostAsTargetPersister;
         private readonly IDeleteTargets _targetDeleter;
         private readonly ICreateTargetModels _targetModelFactory;
         private readonly ILogger<TimedHostedIISDiscoveryService> _logger;
@@ -28,8 +27,7 @@ namespace IISDiscoveryService.Synchronization.Services
         public SynchronizationRuleApplier(
             IProvideHostNames hostNameProvider, 
             ITargetsClient targetsClient,
-            IProvideTargetsReflectingHosts targetsReflectingHostProvider, 
-            IPersistHostAsTarget hostAsTargetPersister,
+            IProvideTargetsReflectingHosts targetsReflectingHostProvider,
             IDeleteTargets targetDeleter,
             ICreateTargetModels targetModelFactory, 
             ILogger<TimedHostedIISDiscoveryService> logger)
@@ -37,7 +35,6 @@ namespace IISDiscoveryService.Synchronization.Services
             _hostNameProvider = hostNameProvider;
             _targetsClient = targetsClient;
             _targetsReflectingHostProvider = targetsReflectingHostProvider;
-            _hostAsTargetPersister = hostAsTargetPersister;
             _targetDeleter = targetDeleter;
             _targetModelFactory = targetModelFactory;
             _logger = logger;
@@ -120,7 +117,9 @@ namespace IISDiscoveryService.Synchronization.Services
 
             foreach (var hostToProcess in hostToProcesses)
             {
-                _hostAsTargetPersister.Persist(hostToProcess.Item, tags);
+                var newTarget = _targetModelFactory.Create(hostToProcess.Item, tags);
+
+                _targetsClient.Put(newTarget);
                 hostToProcess.Processed = true;
 
                 _logger.LogInformation($"Host {hostToProcess.Item} added");
