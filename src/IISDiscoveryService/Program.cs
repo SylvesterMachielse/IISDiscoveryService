@@ -1,36 +1,33 @@
 ﻿using System;
-using System.Threading;
-using Autofac;
-using IISDiscoveryService.DependencyInjection;
+using System.Threading.Tasks;
 using IISDiscoveryService.Running;
-using IISDiscoveryService.Synchronization.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace IISDiscoveryService
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            Console.WriteLine("Loading configuration");
+            bool adminPrivilegeAvailable = new AdminPrivilegeAvailableDeterminer().Determine();
 
-            var timer = new Timer(Run, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
-
-            Console.ReadKey();
-        }
-
-        private static void Run(object state)
-        {
-            var configuration = new ConfigurationProvider().Provide();
-
-            using (var scope = new IisDiscoveryServiceContainerBuilder().Build(configuration))
+            if (!adminPrivilegeAvailable)
             {
-                var synchronizationRulesApplier = scope.Resolve<IApplySynchronizationRules>();
-                
-                foreach (var rule in configuration.SynchronizationRules)
-                {
-                    synchronizationRulesApplier.Apply(rule);
-                }
+                throw new InvalidOperationException("No admin privilege available");
             }
+
+            var hostBuilder = new HostBuilder()
+                
+                .ConfigureServices((hostContext, services) =>
+                {
+                    services.AddLogging(configure => configure.AddConsole()).AddTransient<TimedHostedIISDiscoveryService>();
+                    services.AddHostedService<TimedHostedIISDiscoveryService>();
+                   
+                });
+
+            await hostBuilder.RunConsoleAsync();
         }
     }
 }

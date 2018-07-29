@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using IISDiscoveryService.Synchronization.Factories;
 using IISDiscoveryService.Synchronization.Models;
@@ -9,6 +10,8 @@ using IISDiscoveryService.Synchronization.Providers;
 using PrometheusFileServiceDiscovery.Contracts.Models;
 using PrometheusFileServiceDiscoveryApi.Client;
 using IISDiscoveryService.Extensions;
+using IISDiscoveryService.Running;
+using Microsoft.Extensions.Logging;
 
 namespace IISDiscoveryService.Synchronization.Services
 {
@@ -20,6 +23,7 @@ namespace IISDiscoveryService.Synchronization.Services
         private readonly IPersistHostAsTarget _hostAsTargetPersister;
         private readonly IDeleteTargets _targetDeleter;
         private readonly ICreateTargetModels _targetModelFactory;
+        private readonly ILogger<TimedHostedIISDiscoveryService> _logger;
         
         public SynchronizationRuleApplier(
             IProvideHostNames hostNameProvider, 
@@ -27,7 +31,8 @@ namespace IISDiscoveryService.Synchronization.Services
             IProvideTargetsReflectingHosts targetsReflectingHostProvider, 
             IPersistHostAsTarget hostAsTargetPersister,
             IDeleteTargets targetDeleter,
-            ICreateTargetModels targetModelFactory)
+            ICreateTargetModels targetModelFactory, 
+            ILogger<TimedHostedIISDiscoveryService> logger)
         {
             _hostNameProvider = hostNameProvider;
             _targetsClient = targetsClient;
@@ -35,17 +40,18 @@ namespace IISDiscoveryService.Synchronization.Services
             _hostAsTargetPersister = hostAsTargetPersister;
             _targetDeleter = targetDeleter;
             _targetModelFactory = targetModelFactory;
+            _logger = logger;
         }
 
         public void Apply(SynchronizationRule rule)
         {
-            Console.WriteLine($"Synchronizing rule: {rule.Name}");
+            _logger.LogInformation($"Synchronizing rule: {rule.Name}");
 
             var hostsToProcess = GetHostsToProcess(rule.HostRegexFilter);
-            Console.WriteLine($"Current number of IIS hosts: {hostsToProcess.Count}");
+            _logger.LogInformation($"Current number of IIS hosts: {hostsToProcess.Count}");
 
             var targetsToProcess = GetTargetsToProcess(rule.HostRegexFilter);
-            Console.WriteLine($"Current number of metric targets: {targetsToProcess.Count}");
+            _logger.LogInformation($"Current number of metric targets: {targetsToProcess.Count}");
 
             Process(hostsToProcess, targetsToProcess, rule.TargetLabels);
         }       
@@ -66,30 +72,21 @@ namespace IISDiscoveryService.Synchronization.Services
 
         private void DeleteOldTargets(List<ItemToProcess<TargetModel>> targetsToProcess)
         {
+            _logger.LogInformation("Removing targets that have no corresponding host");
+
             foreach (var targetToProcess in targetsToProcess.Where(x => !x.Processed))
             {
                 _targetDeleter.Delete(targetToProcess.Item);
                 targetToProcess.Processed = true;
 
-                Console.WriteLine($"Target {targetToProcess.Item.Targets[0]} deleted");
-            }
-        }
-
-        private void AddNewTargets(List<ItemToProcess<string>> hostsToProcess, Dictionary<string,string> tags)
-        {
-            foreach (var hostToProcess in hostsToProcess.Where(x => !x.Processed))
-            {
-                _hostAsTargetPersister.Persist(hostToProcess.Item, tags);
-                hostToProcess.Processed = true;
-
-                Console.WriteLine($"Host {hostToProcess.Item} added");
+                _logger.LogInformation($"Target {targetToProcess.Item.Targets[0]} deleted");
             }
         }
 
         private void ProcessHostsInSync(List<ItemToProcess<string>> hostsToProcess, List<ItemToProcess<TargetModel>> targetsToProcess, Dictionary<string,string> tags)
         {
-
-            //TODO: PATCH labels if needed
+            _logger.LogInformation("Filtering up to date hosts");
+          
             foreach (var hostToProcess in hostsToProcess)
             {
                 var reflectingTarget = _targetsReflectingHostProvider.Provide(hostToProcess.Item,
@@ -100,26 +97,47 @@ namespace IISDiscoveryService.Synchronization.Services
                     var newTarget = _targetModelFactory.Create(hostToProcess.Item, tags);
                     if(!newTarget.Labels.ContentEquals(reflectingTarget.Tags)){ 
                         
-                        Console.WriteLine($"Patching tags of {hostToProcess.Item}");
+                        _logger.LogInformation($"Host {hostToProcess.Item} is up to date, but tags are out of date");
+                        _logger.LogInformation($"Patching tags of {hostToProcess.Item}");
 
                         _targetsClient.Patch(newTarget);
-                        }
-                        
-
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Host {hostToProcess.Item} up to date");
+                    }
 
                     reflectingTarget.Processed = true;
                     hostToProcess.Processed = true;
-
-                    Console.WriteLine($"Host {hostToProcess.Item} up to date");
                 }
             }
         }
 
+        private void AddNewTargets(List<ItemToProcess<string>> hostsToProcess, Dictionary<string,string> tags)
+        {
+            var hostToProcesses = hostsToProcess.Where(x => !x.Processed).ToList();
+            _logger.LogInformation($"Processing {hostToProcesses.Count} hosts with no corresponding scrape target");
+
+            foreach (var hostToProcess in hostToProcesses)
+            {
+                _hostAsTargetPersister.Persist(hostToProcess.Item, tags);
+                hostToProcess.Processed = true;
+
+                _logger.LogInformation($"Host {hostToProcess.Item} added");
+            }
+        }
 
         private List<ItemToProcess<TargetModel>> GetTargetsToProcess(string hostRegexFilter)
         {
-            //TODO: handle request errors
-            var targets = _targetsClient.Get().Data;
+            var restResponse = _targetsClient.Get();
+            if (restResponse.StatusCode != HttpStatusCode.OK)
+            {
+                _logger.LogError($"PrometheusFileServiceDiscoveryApi did not return status 200, instead it returned {restResponse.StatusCode}. Full response: {restResponse}");
+
+                throw new InvalidOperationException("Cannot continue when PrometheusFileServiceDiscoveryApi is not available");
+            }
+
+            var targets = restResponse.Data;
             var targetsToProcess = new List<ItemToProcess<TargetModel>>();
             targets.Where(t => Regex.IsMatch(t.Targets[0], hostRegexFilter)).ToList().ForEach(x => targetsToProcess.Add(new ItemToProcess<TargetModel>()
             {
@@ -140,6 +158,7 @@ namespace IISDiscoveryService.Synchronization.Services
                 Item = x
                 
             }));
+
             return hostsToProcess;
         }
     }
