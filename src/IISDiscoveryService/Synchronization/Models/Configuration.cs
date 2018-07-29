@@ -6,6 +6,7 @@ namespace IISDiscoveryService.Synchronization.Models
 {
    public  class Configuration
     {
+        public string TargetClient { get; set; }
         public Dictionary<string, string> GlobalTags { get; set; }
         public List<SynchronizationRule> SynchronizationRules { get;set; }
     }
