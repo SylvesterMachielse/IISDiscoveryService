@@ -1,0 +1,65 @@
+$tempFolder = "C:\Temp\InstallMetrics"
+New-Item -ItemType Directory -Force -Path $tempFolder
+
+#install choco
+$ChocoInstalled = $false
+if (Get-Command choco.exe -ErrorAction SilentlyContinue) {
+    $ChocoInstalled = $true
+}
+
+if (!$ChocoInstalled){
+    Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+} else {
+    Write-Output "Choco already installed..."
+}
+
+choco install nssm -y
+choco install 7zip -y
+
+#declare Expand-Tar
+function Expand-Tar($tarFile, $dest) {
+ 
+    $output = "-o" + $dest
+
+    & "C:\Program Files\7-Zip\7z.exe" x $tarFile $output -aoa
+
+    #Expand-7Zip $tarFile $dest 
+}
+
+#enable Tls 1.2 (stolen from: https://github.com/lukesampson/scoop/pull/2074/commits/0dd5c40e13a9bcfa2013bd525a535a3d994de408)
+function enable-encryptionscheme($scheme) {
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor $scheme
+}
+enable-encryptionscheme "Tls12"
+
+
+#INSTALL IISDiscoveryService
+$iisdiscTargetDirectory = "C:\ProgramData\IISDiscoveryService"
+
+#create target directory
+New-Item -ItemType Directory -Force -Path $iisdiscTargetDirectory
+
+#download iisdisc
+##iisdisc url
+$url = "https://github.com/SylvesterMachielse/IISDiscoveryService/releases/download/v1.0/publish.7z"
+
+##set download target location
+$iisdiscDownloadTarget = "$tempFolder\IISDiscoveryService.7z"
+
+##download file
+$wc = New-Object System.Net.WebClient
+$wc.DownloadFile($url, $iisdiscDownloadTarget)
+
+#Extract iisdisc (is a tar inside a gz or something ==> anyway, extract twice)
+Expand-Tar $iisdiscDownloadTarget $iisdiscTargetDirectory
+
+nssm install iisdisc $iisdiscTargetDirectory\IISDiscoveryService.exe
+nssm set iisdisc AppDirectory $iisdiscTargetDirectory
+nssm set iisdisc AppExit Default Restart
+nssm set iisdisc DisplayName iisdisc
+nssm set iisdisc ObjectName LocalSystem
+nssm set iisdisc Start SERVICE_AUTO_START
+nssm set iisdisc Type SERVICE_WIN32_OWN_PROCESS
+
+nssm start iisdisc
+
