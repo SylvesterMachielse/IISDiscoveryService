@@ -1,23 +1,22 @@
 ﻿using System.Collections.Generic;
+using System.Security.Policy;
 using System.Text.RegularExpressions;
 using Microsoft.Web.Administration;
 
-namespace IISDiscoveryService.Synchronization.Providers
+namespace IISDiscoveryService.Providers
 {
-    public class HostNameProvider : IProvideHostNames
+    public class IISWebsiteProvider
     {
-        public List<string> Provide(string regexFilter)
+        public List<string> Provide()
         {
             var result = new List<string>();
             var iisManager = new ServerManager();
             SiteCollection sites = iisManager.Sites;
 
-            foreach (Site site in sites)
+            foreach (var site in sites)
             {
                 foreach (var binding in site.Bindings)
                 {
-                    if (!Regex.IsMatch(binding.Host, regexFilter)) continue;
-
                     result.Add(binding.Host);
                 }
             }
