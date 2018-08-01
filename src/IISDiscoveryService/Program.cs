@@ -1,33 +1,49 @@
 ﻿using System;
-using System.Threading.Tasks;
-using IISDiscoveryService.Running;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using Autofac.Extensions.DependencyInjection;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace IISDiscoveryService
 {
     public class Program
     {
-        public static async Task Main(string[] args)
-        {
-            bool adminPrivilegeAvailable = new AdminPrivilegeAvailableDeterminer().Determine();
+        public IConfiguration Configuration { get; }
 
-            if (!adminPrivilegeAvailable)
+        public static void Main(string[] args)
+        {
+            bool isService = true;
+            if (Debugger.IsAttached || args.Contains("--console"))
             {
-                throw new InvalidOperationException("No admin privilege available");
+                isService = false;
             }
 
-            var hostBuilder = new HostBuilder()
-                
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddLogging(configure => configure.AddConsole()).AddTransient<TimedHostedIISDiscoveryService>();
-                    services.AddHostedService<TimedHostedIISDiscoveryService>();
-                   
-                });
+            var pathToContentRoot = Directory.GetCurrentDirectory();
+            if (isService)
+            {
+                var pathToExe = Process.GetCurrentProcess().MainModule.FileName;
+                pathToContentRoot = Path.GetDirectoryName(pathToExe);
+            }
 
-            await hostBuilder.RunConsoleAsync();
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .AddCommandLine(args)
+                .Build();
+
+            var host = BuildWebHost(args, configuration, pathToContentRoot);
+
+            host.Run();
         }
+
+        public static IWebHost BuildWebHost(string[] args, IConfigurationRoot configuration, string pathToContentRoot) =>
+            WebHost.CreateDefaultBuilder(args)
+                .UseStartup<Startup>()
+                .UseContentRoot(pathToContentRoot)
+                .ConfigureServices(services => services.AddAutofac())
+                .UseUrls(configuration["Host"])
+                .Build();
     }
 }
