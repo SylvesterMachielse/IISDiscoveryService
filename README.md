@@ -17,7 +17,14 @@ A service that scans IIS websites and reports them on an enpoint
 ```
 
 ## Architecture
-![architecture](https://github.com/SylvesterMachielse/IISDiscoveryService/raw/master/architecture.PNG "Architecture")
+When installed, you can call `GET` http://myserver:9080/api/v1/websites and the endpoint will return websites running in IIS:
+```javascript
+["site1.com",
+"site2.com",
+"test.site3.com",
+"moresites.com",
+"etc.com"]
+```
 
 ### How to install
 There is a work in progress installation script [here](https://raw.githubusercontent.com/SylvesterMachielse/IISDiscoveryService/master/InstallScript.ps)
